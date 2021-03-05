@@ -1,27 +1,22 @@
-package aggsig
+package gost3410
 
 import (
 	"math/big"
 
-	"github.com/AllFi/go-gost3410/gost3410"
 	"github.com/pkg/errors"
 )
 
-var (
-	zero = big.NewInt(0)
-)
-
 func SignPartial(
-	context *gost3410.Context,
+	context *Context,
 	rawPrivateKey []byte,
 	nonce []byte,
-	sumNonces *gost3410.PublicKey,
+	sumNonces *PublicKey,
 	msg []byte,
 ) (
 	signature []byte,
 	err error,
 ) {
-	privateKey, err := gost3410.NewPrivateKey(context, rawPrivateKey)
+	privateKey, err := NewPrivateKey(context, rawPrivateKey)
 	if err != nil {
 		err = errors.Wrap(err, "cannot NewPrivateKey")
 		return
@@ -30,7 +25,7 @@ func SignPartial(
 	d := privateKey.Key
 	k := big.NewInt(0).SetBytes(nonce)
 	r := sumNonces.X
-	e := gost3410.СalculateDigest(msg, context.Curve)
+	e := СalculateDigest(msg, context.Curve)
 
 	// s = d*r + k*e mod q, where d - privateKey, k - nonce, r - x coordinate of sumNonces, e - message digest
 	s := big.NewInt(0)
@@ -41,36 +36,36 @@ func SignPartial(
 	}
 
 	return append(
-		gost3410.Pad(s.Bytes(), int(context.Mode)),
-		gost3410.Pad(r.Bytes(), int(context.Mode))...,
+		Pad(s.Bytes(), int(context.Mode)),
+		Pad(r.Bytes(), int(context.Mode))...,
 	), nil
 }
 
-func AggregatePartialSignatures(context *gost3410.Context, rawPartialSignatures [][]byte, sumNonces *gost3410.PublicKey) (signature []byte, err error) {
-	s := gost3410.BytesToBigInt(rawPartialSignatures[0][:context.Mode])
+func AggregatePartialSignatures(context *Context, rawPartialSignatures [][]byte, sumNonces *PublicKey) (signature []byte, err error) {
+	s := BytesToBigInt(rawPartialSignatures[0][:context.Mode])
 	r := sumNonces.X
 	r.Mod(r, context.Curve.Q)
 	for i := 1; i < len(rawPartialSignatures); i++ {
-		si := gost3410.BytesToBigInt(rawPartialSignatures[i][:context.Mode])
+		si := BytesToBigInt(rawPartialSignatures[i][:context.Mode])
 		s.Add(s, si)
 		s.Mod(s, context.Curve.Q)
 	}
 
 	return append(
-		gost3410.Pad(s.Bytes(), int(context.Mode)),
-		gost3410.Pad(r.Bytes(), int(context.Mode))...,
+		Pad(s.Bytes(), int(context.Mode)),
+		Pad(r.Bytes(), int(context.Mode))...,
 	), nil
 }
 
-func Verify(context *gost3410.Context, signature []byte, publicKey *gost3410.PublicKey, msg []byte) (correct bool, err error) {
+func Verify(context *Context, signature []byte, publicKey *PublicKey, msg []byte) (correct bool, err error) {
 	return verify(context, signature, publicKey, msg, nil)
 }
 
-func VerifyPartial(context *gost3410.Context, signature []byte, publicKey *gost3410.PublicKey, publicNonce *gost3410.PublicKey, msg []byte) (correct bool, err error) {
+func VerifyPartial(context *Context, signature []byte, publicKey *PublicKey, publicNonce *PublicKey, msg []byte) (correct bool, err error) {
 	return verify(context, signature, publicKey, msg, publicNonce.X)
 }
 
-func verify(context *gost3410.Context, signature []byte, publicKey *gost3410.PublicKey, msg []byte, partialR *big.Int) (correct bool, err error) {
+func verify(context *Context, signature []byte, publicKey *PublicKey, msg []byte, partialR *big.Int) (correct bool, err error) {
 	curve := context.Curve
 	mode := context.Mode
 
@@ -80,13 +75,13 @@ func verify(context *gost3410.Context, signature []byte, publicKey *gost3410.Pub
 	}
 
 	// r > 0, r < q, s > 0, s < q
-	s := gost3410.BytesToBigInt(signature[:mode])
-	r := gost3410.BytesToBigInt(signature[mode:])
+	s := BytesToBigInt(signature[:mode])
+	r := BytesToBigInt(signature[mode:])
 	if r.Cmp(zero) <= 0 || r.Cmp(curve.Q) >= 0 || s.Cmp(zero) <= 0 || s.Cmp(curve.Q) >= 0 {
 		return false, nil
 	}
 
-	e := gost3410.СalculateDigest(msg, curve)
+	e := СalculateDigest(msg, curve)
 	v := big.NewInt(0).ModInverse(e, curve.Q)
 
 	// z1 = s * v mod q
@@ -122,7 +117,7 @@ func verify(context *gost3410.Context, signature []byte, publicKey *gost3410.Pub
 	return R.Cmp(r) == 0, nil
 }
 
-func SumPublicKeys(context *gost3410.Context, publicKeys []*gost3410.PublicKey) (sum *gost3410.PublicKey, err error) {
+func SumPublicKeys(context *Context, publicKeys []*PublicKey) (sum *PublicKey, err error) {
 	if publicKeys == nil || len(publicKeys) == 0 {
 		err = errors.New("publicKeys is null or empty")
 		return
@@ -137,5 +132,5 @@ func SumPublicKeys(context *gost3410.Context, publicKeys []*gost3410.PublicKey) 
 		curve.Add(x, y, publicKeys[i].X, publicKeys[i].Y)
 	}
 
-	return &gost3410.PublicKey{x, y}, nil
+	return &PublicKey{x, y}, nil
 }
