@@ -1,17 +1,26 @@
-package gost3410
+package aggsig
 
 import (
-	"crypto/rand"
 	"testing"
+
+	"github.com/AllFi/go-gost3410"
+	"github.com/AllFi/go-gost3410/curve"
+	"github.com/AllFi/go-gost3410/utils"
 
 	"github.com/stretchr/testify/assert"
 )
 
+// func TestDebug(t *testing.T) {
+// 	p := []string{"p", "q", "a", "b", "Bx", "By"}
+// 	for i := 0; i < len(CurveParamsGostR34102001CryptoProA); i++ {
+// 		println(p[i], hex.EncodeToString(CurveParamsGostR34102001CryptoProA[i]))
+// 	}
+// }
+
 func TestAggsig(t *testing.T) {
 	n := 4
-	mode := Mode2001
-	curveParams := CurveParamsGostR34102001CryptoProA
-	context, err := NewContext(mode, curveParams)
+	context, err := gost3410.NewContext(curve.GOST34102001())
+	mode := context.Curve.Params().BitSize / 8
 	assert.NoError(t, err)
 
 	privateKeys := make([][]byte, n)
@@ -19,14 +28,14 @@ func TestAggsig(t *testing.T) {
 	nonces := make([][]byte, n)
 	publicNonces := make([]*PublicKey, n)
 	for i := 0; i < n; i++ {
-		privateKey := randomBytes(int(context.Mode), context)
+		privateKey := utils.RandomBytes(mode)
 		publicKey, err := NewPublicKey(context, privateKey)
 		assert.NoError(t, err)
 
 		privateKeys[i] = privateKey
 		publicKeys[i] = publicKey
 
-		nonce := randomBytes(int(context.Mode), context)
+		nonce := utils.RandomBytes(mode)
 		publicNonce, err := NewPublicKey(context, nonce)
 		assert.NoError(t, err)
 
@@ -58,10 +67,4 @@ func TestAggsig(t *testing.T) {
 	correct, err := Verify(context, signature, sumPublicKeys, msg)
 	assert.True(t, correct)
 	assert.NoError(t, err)
-}
-
-func randomBytes(count int, context *Context) []byte {
-	b := make([]byte, count)
-	rand.Read(b)
-	return b
 }

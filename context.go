@@ -1,19 +1,13 @@
 package gost3410
 
 import (
-	"github.com/pkg/errors"
+	"crypto/elliptic"
 )
 
 type Context struct {
-	Mode  Mode
-	Curve *Curve
+	Curve elliptic.Curve
 }
 
-func NewContext(mode Mode, curveParams CurveParams) (context *Context, err error) {
-	curve, err := NewCurveFromParams(curveParams)
-	if err != nil {
-		err = errors.Wrap(err, "cannot NewCurveFromParams")
-		return
-	}
-	return &Context{Mode: mode, Curve: curve}, nil
+func NewContext(curve elliptic.Curve) (context *Context, err error) {
+	return &Context{Curve: curve}, nil
 }
