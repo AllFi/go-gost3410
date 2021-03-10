@@ -33,7 +33,7 @@ import (
 func TestXEqualsRangeStart(t *testing.T) {
 	rangeEnd := int64(math.Pow(2, 32))
 	x := new(big.Int).SetInt64(0)
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 
 	params := setupRange(t, context, rangeEnd)
 	if proveAndVerifyRange(context, x, params) != true {
@@ -44,7 +44,7 @@ func TestXEqualsRangeStart(t *testing.T) {
 func TestXLowerThanRangeStart(t *testing.T) {
 	rangeEnd := int64(math.Pow(2, 32))
 	x := new(big.Int).SetInt64(-1)
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 
 	params := setupRange(t, context, rangeEnd)
 	if proveAndVerifyRange(context, x, params) == true {
@@ -55,7 +55,7 @@ func TestXLowerThanRangeStart(t *testing.T) {
 func TestXHigherThanRangeEnd(t *testing.T) {
 	rangeEnd := int64(math.Pow(2, 32))
 	x := new(big.Int).SetInt64(rangeEnd + 1)
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 
 	params := setupRange(t, context, rangeEnd)
 	if proveAndVerifyRange(context, x, params) == true {
@@ -66,7 +66,7 @@ func TestXHigherThanRangeEnd(t *testing.T) {
 func TestXEqualToRangeEnd(t *testing.T) {
 	rangeEnd := int64(math.Pow(2, 32))
 	x := new(big.Int).SetInt64(rangeEnd)
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 
 	params := setupRange(t, context, rangeEnd)
 	if proveAndVerifyRange(context, x, params) == true {
@@ -77,7 +77,7 @@ func TestXEqualToRangeEnd(t *testing.T) {
 func TestXWithinRange(t *testing.T) {
 	rangeEnd := int64(math.Pow(2, 32))
 	x := new(big.Int).SetInt64(3)
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 
 	params := setupRange(t, context, rangeEnd)
 	if proveAndVerifyRange(context, x, params) != true {
@@ -101,7 +101,7 @@ func proveAndVerifyRange(context *gost3410.Context, x *big.Int, params BulletPro
 }
 
 func TestJsonEncodeDecode(t *testing.T) {
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 	params, _ := Setup(context, MAX_RANGE_END)
 	proof, _ := Prove(context, new(big.Int).SetInt64(18), params)
 	jsonEncoded, err := json.Marshal(proof)

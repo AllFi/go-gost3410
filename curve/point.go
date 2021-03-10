@@ -3,7 +3,7 @@ package curve
 import (
 	"bytes"
 	"crypto/elliptic"
-	"errors"
+	"encoding/hex"
 	"math/big"
 	"strconv"
 
@@ -11,6 +11,7 @@ import (
 	gghash "github.com/AllFi/go-gost3410/hash"
 	"github.com/AllFi/go-gost3410/utils"
 	"github.com/ing-bank/zkrp/util/bn"
+	"github.com/pkg/errors"
 )
 
 type Point struct {
@@ -152,11 +153,34 @@ func F(ec elliptic.Curve, x *big.Int) (*big.Int, error) {
 func (p *Point) Bytes(curve elliptic.Curve) []byte {
 	mode := curve.Params().BitSize / 8
 	raw := append(
-		utils.Pad(p.Y.Bytes(), mode),
-		utils.Pad(p.X.Bytes(), mode)...,
+		utils.Pad(p.X.Bytes(), mode),
+		utils.Pad(p.Y.Bytes(), mode)...,
 	)
-	utils.Reverse(raw)
 	return raw
+}
+
+func PointFromBytes(curve elliptic.Curve, b []byte) (p *Point, err error) {
+	mode := curve.Params().BitSize / 8
+	if len(b) != mode*2 {
+		err = errors.New("invalid length")
+		return
+	}
+	x, y := new(big.Int).SetBytes(b[:mode]), new(big.Int).SetBytes(b[mode:])
+	return &Point{x, y}, nil
+}
+
+func (p *Point) Hex(curve elliptic.Curve) string {
+	raw := p.Bytes(curve)
+	return hex.EncodeToString(raw)
+}
+
+func PointFromHex(curve elliptic.Curve, s string) (p *Point, err error) {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		err = errors.Wrap(err, "cannot DecodeString")
+		return
+	}
+	return PointFromBytes(curve, b)
 }
 
 /*

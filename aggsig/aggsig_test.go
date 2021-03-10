@@ -14,9 +14,8 @@ import (
 
 func TestAggsig(t *testing.T) {
 	n := 4
-	context, err := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 	mode := context.Curve.Params().BitSize / 8
-	assert.NoError(t, err)
 
 	privateKeys := make([][]byte, n)
 	publicKeys := make([]*PublicKey, n)

@@ -7,7 +7,7 @@ import (
 )
 
 type PublicKey struct {
-	curve.Point
+	*curve.Point
 }
 
 func NewPublicKey(context *gost3410.Context, rawPrivateKey []byte) (publicKey *PublicKey, err error) {

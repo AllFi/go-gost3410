@@ -30,5 +30,5 @@ func NewPrivateKey(context *gost3410.Context, raw []byte) (privateKey *PrivateKe
 
 func (prv *PrivateKey) PublicKey(context *gost3410.Context) (*PublicKey, error) {
 	x, y := context.Curve.ScalarBaseMult(prv.Bytes())
-	return &PublicKey{curve.Point{x, y}}, nil
+	return &PublicKey{&curve.Point{x, y}}, nil
 }

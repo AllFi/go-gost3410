@@ -131,5 +131,5 @@ func SumPublicKeys(context *gost3410.Context, publicKeys []*PublicKey) (sum *Pub
 		x, y = context.Curve.Add(x, y, publicKeys[i].X, publicKeys[i].Y)
 	}
 
-	return &PublicKey{curve.Point{x, y}}, nil
+	return &PublicKey{&curve.Point{x, y}}, nil
 }

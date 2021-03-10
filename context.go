@@ -14,6 +14,6 @@ type Context struct {
 	HashAlgorithm HashAlgorithm
 }
 
-func NewContext(curve elliptic.Curve, hashAlg HashAlgorithm) (context *Context, err error) {
-	return &Context{Curve: curve, HashAlgorithm: hashAlg}, nil
+func NewContext(curve elliptic.Curve, hashAlg HashAlgorithm) (context *Context) {
+	return &Context{Curve: curve, HashAlgorithm: hashAlg}
 }

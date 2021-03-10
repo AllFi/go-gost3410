@@ -12,7 +12,7 @@ import (
 )
 
 func TestMultiparty(t *testing.T) {
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 	order := context.Curve.Params().N
 	params, errSetup := Setup(context, MAX_RANGE_END)
 	assert.NoError(t, errSetup)

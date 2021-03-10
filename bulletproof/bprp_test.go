@@ -29,35 +29,35 @@ import (
 )
 
 func TestXWithinGenericRange(t *testing.T) {
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 	if setupProveVerify18To200(t, context, 40) != true {
 		t.Errorf("secret within range should verify successfully")
 	}
 }
 
 func TestXEqualToRangeStartGeneric(t *testing.T) {
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 	if setupProveVerify18To200(t, context, 18) != true {
 		t.Errorf("secret equal to range start should verify successfully")
 	}
 }
 
 func TestXLessThanRangeStartGeneric(t *testing.T) {
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 	if setupProveVerify18To200(t, context, 17) != false {
 		t.Errorf("secret less that range start should fail verification")
 	}
 }
 
 func TestXGreaterThanRangeEndGeneric(t *testing.T) {
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 	if setupProveVerify18To200(t, context, 201) != false {
 		t.Errorf("secret greater than range end should fail verification")
 	}
 }
 
 func TestXEqualToRangeEndGeneric(t *testing.T) {
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 	if setupProveVerify18To200(t, context, 200) != false {
 		t.Errorf("secret equal to range end should fail verification")
 	}
@@ -86,7 +86,7 @@ func setupProveVerify18To200(t *testing.T, context *gost3410.Context, secret int
 func TestJsonEncodeDecodeBPRP(t *testing.T) {
 	// Set up the range, [18, 200) in this case.
 	// We want to prove that we are over 18, and less than 200 years old.
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 	params, errSetup := SetupGeneric(context, 18, 200)
 	if errSetup != nil {
 		t.Errorf(errSetup.Error())

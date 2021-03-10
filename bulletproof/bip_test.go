@@ -36,7 +36,7 @@ func TestInnerProduct(t *testing.T) {
 		b                  []*big.Int
 	)
 	c := new(big.Int).SetInt64(142)
-	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	context := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 
 	innerProductParams, _ = setupInnerProduct(context, nil, nil, nil, c, 4)
 
