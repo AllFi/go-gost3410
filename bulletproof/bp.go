@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/AllFi/go-gost3410"
 	"github.com/AllFi/go-gost3410/curve"
 	"github.com/ing-bank/zkrp/util/bn"
 )
@@ -73,14 +74,17 @@ SetupInnerProduct is responsible for computing the common parameters.
 Only works for ranges to 0 to 2^n, where n is a power of 2 and n <= 32
 TODO: allow n > 32 (need uint64 for that).
 */
-func Setup(ec elliptic.Curve, b int64) (BulletProofSetupParams, error) {
+func Setup(context *gost3410.Context, b int64) (BulletProofSetupParams, error) {
+	ec := context.Curve
+	ha := context.HashAlgorithm
+
 	if !IsPowerOfTwo(b) {
 		return BulletProofSetupParams{}, errors.New("range end is not a power of 2")
 	}
 
 	params := BulletProofSetupParams{}
 	params.G = new(curve.Point).ScalarBaseMult(ec, new(big.Int).SetInt64(1))
-	params.H, _ = curve.MapToGroup(ec, SEEDH)
+	params.H, _ = curve.MapToGroup(ec, ha, SEEDH)
 	params.N = int64(math.Log2(float64(b)))
 	if !IsPowerOfTwo(params.N) {
 		return BulletProofSetupParams{}, fmt.Errorf("range end is a power of 2, but it's exponent should also be. Exponent: %d", params.N)
@@ -91,8 +95,8 @@ func Setup(ec elliptic.Curve, b int64) (BulletProofSetupParams, error) {
 	params.Gg = make([]*curve.Point, params.N)
 	params.Hh = make([]*curve.Point, params.N)
 	for i := int64(0); i < params.N; i++ {
-		params.Gg[i], _ = curve.MapToGroup(ec, SEEDH+"g"+strconv.Itoa(int(i)))
-		params.Hh[i], _ = curve.MapToGroup(ec, SEEDH+"h"+strconv.Itoa(int(i)))
+		params.Gg[i], _ = curve.MapToGroup(ec, ha, SEEDH+"g"+strconv.Itoa(int(i)))
+		params.Hh[i], _ = curve.MapToGroup(ec, ha, SEEDH+"h"+strconv.Itoa(int(i)))
 	}
 	return params, nil
 }
@@ -102,7 +106,10 @@ Prove computes the ZK rangeproof. The documentation and comments are based on
 eprint version of Bulletproofs papers:
 https://eprint.iacr.org/2017/1066.pdf
 */
-func Prove(ec elliptic.Curve, secret *big.Int, params BulletProofSetupParams) (BulletProof, error) {
+func Prove(context *gost3410.Context, secret *big.Int, params BulletProofSetupParams) (BulletProof, error) {
+	ec := context.Curve
+	ha := context.HashAlgorithm
+
 	var (
 		proof BulletProof
 	)
@@ -129,7 +136,7 @@ func Prove(ec elliptic.Curve, secret *big.Int, params BulletProofSetupParams) (B
 	S := commitVectorBig(ec, sL, sR, rho, params.H, params.Gg, params.Hh, params.N) // (47)
 
 	// Fiat-Shamir heuristic to compute challenges y and z, corresponds to    (49)
-	y, z, _ := HashBP(A, S)
+	y, z, _ := HashBP(ha, A, S)
 
 	// ////////////////////////////////////////////////////////////////////////////
 	// Second phase: page 20
@@ -182,7 +189,7 @@ func Prove(ec elliptic.Curve, secret *big.Int, params BulletProofSetupParams) (B
 	T2, _ := CommitG1(ec, t2, tau2, params.H) // (53)
 
 	// Fiat-Shamir heuristic to compute 'random' challenge x
-	x, _, _ := HashBP(T1, T2)
+	x, _, _ := HashBP(ha, T1, T2)
 
 	// ////////////////////////////////////////////////////////////////////////////
 	// Third phase                                                              //
@@ -219,12 +226,12 @@ func Prove(ec elliptic.Curve, secret *big.Int, params BulletProofSetupParams) (B
 
 	// SetupInnerProduct Inner Product (Section 4.2)
 	var setupErr error
-	params.InnerProductParams, setupErr = setupInnerProduct(ec, params.H, params.Gg, hprime, tprime, params.N)
+	params.InnerProductParams, setupErr = setupInnerProduct(context, params.H, params.Gg, hprime, tprime, params.N)
 	if setupErr != nil {
 		return proof, setupErr
 	}
 	commit := commitInnerProduct(ec, params.Gg, hprime, bl, br)
-	proofip, _ := proveInnerProduct(ec, bl, br, commit, params.InnerProductParams)
+	proofip, _ := proveInnerProduct(context, bl, br, commit, params.InnerProductParams)
 
 	proof.V = V
 	proof.A = A
@@ -244,13 +251,16 @@ func Prove(ec elliptic.Curve, secret *big.Int, params BulletProofSetupParams) (B
 /*
 Verify returns true if and only if the proof is valid.
 */
-func (proof *BulletProof) Verify(ec elliptic.Curve) (bool, error) {
+func (proof *BulletProof) Verify(context *gost3410.Context) (bool, error) {
+	ec := context.Curve
+	ha := context.HashAlgorithm
+
 	params := proof.Params
 	order := ec.Params().N
 
 	// Recover x, y, z using Fiat-Shamir heuristic
-	x, _, _ := HashBP(proof.T1, proof.T2)
-	y, z, _ := HashBP(proof.A, proof.S)
+	x, _, _ := HashBP(ha, proof.T1, proof.T2)
+	y, z, _ := HashBP(ha, proof.A, proof.S)
 
 	// Switch generators                                                   // (64)
 	hprime := updateGenerators(ec, params.Hh, y, params.N)
@@ -331,7 +341,7 @@ func (proof *BulletProof) Verify(ec elliptic.Curve) (bool, error) {
 	c67 := rP.IsZero()
 
 	// Verify Inner Product Proof ################################################
-	ok, _ := proof.InnerProductProof.Verify(ec)
+	ok, _ := proof.InnerProductProof.Verify(context)
 
 	result := c65 && c67 && ok
 

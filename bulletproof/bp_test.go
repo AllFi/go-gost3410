@@ -18,13 +18,14 @@
 package bulletproofs
 
 import (
-	"crypto/elliptic"
 	"encoding/json"
 	"math"
 	"math/big"
 	"testing"
 
+	"github.com/AllFi/go-gost3410"
 	"github.com/AllFi/go-gost3410/curve"
+	"github.com/AllFi/go-gost3410/hash"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -32,10 +33,10 @@ import (
 func TestXEqualsRangeStart(t *testing.T) {
 	rangeEnd := int64(math.Pow(2, 32))
 	x := new(big.Int).SetInt64(0)
-	ec := curve.GOST34102001()
+	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 
-	params := setupRange(t, ec, rangeEnd)
-	if proveAndVerifyRange(ec, x, params) != true {
+	params := setupRange(t, context, rangeEnd)
+	if proveAndVerifyRange(context, x, params) != true {
 		t.Errorf("x equal to range start should verify successfully")
 	}
 }
@@ -43,10 +44,10 @@ func TestXEqualsRangeStart(t *testing.T) {
 func TestXLowerThanRangeStart(t *testing.T) {
 	rangeEnd := int64(math.Pow(2, 32))
 	x := new(big.Int).SetInt64(-1)
-	ec := curve.GOST34102001()
+	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 
-	params := setupRange(t, ec, rangeEnd)
-	if proveAndVerifyRange(ec, x, params) == true {
+	params := setupRange(t, context, rangeEnd)
+	if proveAndVerifyRange(context, x, params) == true {
 		t.Errorf("x lower than range start should not verify")
 	}
 }
@@ -54,10 +55,10 @@ func TestXLowerThanRangeStart(t *testing.T) {
 func TestXHigherThanRangeEnd(t *testing.T) {
 	rangeEnd := int64(math.Pow(2, 32))
 	x := new(big.Int).SetInt64(rangeEnd + 1)
-	ec := curve.GOST34102001()
+	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 
-	params := setupRange(t, ec, rangeEnd)
-	if proveAndVerifyRange(ec, x, params) == true {
+	params := setupRange(t, context, rangeEnd)
+	if proveAndVerifyRange(context, x, params) == true {
 		t.Errorf("x higher than range end should not verify")
 	}
 }
@@ -65,10 +66,10 @@ func TestXHigherThanRangeEnd(t *testing.T) {
 func TestXEqualToRangeEnd(t *testing.T) {
 	rangeEnd := int64(math.Pow(2, 32))
 	x := new(big.Int).SetInt64(rangeEnd)
-	ec := curve.GOST34102001()
+	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 
-	params := setupRange(t, ec, rangeEnd)
-	if proveAndVerifyRange(ec, x, params) == true {
+	params := setupRange(t, context, rangeEnd)
+	if proveAndVerifyRange(context, x, params) == true {
 		t.Errorf("x equal to range end should not verify")
 	}
 }
@@ -76,16 +77,16 @@ func TestXEqualToRangeEnd(t *testing.T) {
 func TestXWithinRange(t *testing.T) {
 	rangeEnd := int64(math.Pow(2, 32))
 	x := new(big.Int).SetInt64(3)
-	ec := curve.GOST34102001()
+	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 
-	params := setupRange(t, ec, rangeEnd)
-	if proveAndVerifyRange(ec, x, params) != true {
+	params := setupRange(t, context, rangeEnd)
+	if proveAndVerifyRange(context, x, params) != true {
 		t.Errorf("x within range should verify successfully")
 	}
 }
 
-func setupRange(t *testing.T, ec elliptic.Curve, rangeEnd int64) BulletProofSetupParams {
-	params, err := Setup(ec, rangeEnd)
+func setupRange(t *testing.T, context *gost3410.Context, rangeEnd int64) BulletProofSetupParams {
+	params, err := Setup(context, rangeEnd)
 	if err != nil {
 		t.Errorf("Invalid range end: %s", err)
 		t.FailNow()
@@ -93,16 +94,16 @@ func setupRange(t *testing.T, ec elliptic.Curve, rangeEnd int64) BulletProofSetu
 	return params
 }
 
-func proveAndVerifyRange(ec elliptic.Curve, x *big.Int, params BulletProofSetupParams) bool {
-	proof, _ := Prove(ec, x, params)
-	ok, _ := proof.Verify(ec)
+func proveAndVerifyRange(context *gost3410.Context, x *big.Int, params BulletProofSetupParams) bool {
+	proof, _ := Prove(context, x, params)
+	ok, _ := proof.Verify(context)
 	return ok
 }
 
 func TestJsonEncodeDecode(t *testing.T) {
-	ec := curve.GOST34102001()
-	params, _ := Setup(ec, MAX_RANGE_END)
-	proof, _ := Prove(ec, new(big.Int).SetInt64(18), params)
+	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	params, _ := Setup(context, MAX_RANGE_END)
+	proof, _ := Prove(context, new(big.Int).SetInt64(18), params)
 	jsonEncoded, err := json.Marshal(proof)
 	if err != nil {
 		t.Fatal("encode error:", err)
@@ -118,7 +119,7 @@ func TestJsonEncodeDecode(t *testing.T) {
 
 	assert.Equal(t, proof, decodedProof, "should be equal")
 
-	ok, err := decodedProof.Verify(ec)
+	ok, err := decodedProof.Verify(context)
 	if err != nil {
 		t.Fatal("verify error:", err)
 	}

@@ -2,12 +2,18 @@ package gost3410
 
 import (
 	"crypto/elliptic"
+	"hash"
 )
 
-type Context struct {
-	Curve elliptic.Curve
+type HashAlgorithm interface {
+	New() hash.Hash
 }
 
-func NewContext(curve elliptic.Curve) (context *Context, err error) {
-	return &Context{Curve: curve}, nil
+type Context struct {
+	Curve         elliptic.Curve
+	HashAlgorithm HashAlgorithm
+}
+
+func NewContext(curve elliptic.Curve, hashAlg HashAlgorithm) (context *Context, err error) {
+	return &Context{Curve: curve, HashAlgorithm: hashAlg}, nil
 }

@@ -1,10 +1,10 @@
 package bulletproofs
 
 import (
-	"crypto/elliptic"
 	"crypto/rand"
 	"math/big"
 
+	"github.com/AllFi/go-gost3410"
 	"github.com/AllFi/go-gost3410/curve"
 	"github.com/ing-bank/zkrp/util/bn"
 )
@@ -23,17 +23,20 @@ type MPCPContext struct {
 	Commit            *curve.Point
 }
 
-func PartialPreProve(ec elliptic.Curve, params BulletProofSetupParams) (context *MPCPContext, publicTau1 *curve.Point, publicTau2 *curve.Point) {
+func PartialPreProve(context *gost3410.Context, params BulletProofSetupParams) (mpcpContext *MPCPContext, publicTau1 *curve.Point, publicTau2 *curve.Point) {
+	ec := context.Curve
 	order := ec.Params().N
 	tau1, _ := rand.Int(rand.Reader, order) // (52)
 	tau2, _ := rand.Int(rand.Reader, order) // (52)
 	publicTau1, _ = CommitG1(ec, big.NewInt(0), tau1, params.H)
 	publicTau2, _ = CommitG1(ec, big.NewInt(0), tau2, params.H)
-	context = &MPCPContext{tau1: tau1, tau2: tau2}
+	mpcpContext = &MPCPContext{tau1: tau1, tau2: tau2}
 	return
 }
 
-func PartialProve(ec elliptic.Curve, secret *big.Int, gamma *big.Int, inContext *MPCPContext, publicTau1s []*curve.Point, publicTau2s []*curve.Point, params BulletProofSetupParams) (outContext *MPCPContext, taux *big.Int, err error) {
+func PartialProve(context *gost3410.Context, secret *big.Int, gamma *big.Int, inContext *MPCPContext, publicTau1s []*curve.Point, publicTau2s []*curve.Point, params BulletProofSetupParams) (outContext *MPCPContext, taux *big.Int, err error) {
+	ec := context.Curve
+	ha := context.HashAlgorithm
 	order := ec.Params().N
 
 	// ////////////////////////////////////////////////////////////////////////////
@@ -56,7 +59,7 @@ func PartialProve(ec elliptic.Curve, secret *big.Int, gamma *big.Int, inContext 
 	S := commitVectorBig(ec, sL, sR, rho, params.H, params.Gg, params.Hh, params.N) // (47)
 
 	// Fiat-Shamir heuristic to compute challenges y and z, corresponds to    (49)
-	y, z, _ := HashBP(A, S)
+	y, z, _ := HashBP(ha, A, S)
 
 	// ////////////////////////////////////////////////////////////////////////////
 	// Second phase: page 20
@@ -113,7 +116,7 @@ func PartialProve(ec elliptic.Curve, secret *big.Int, gamma *big.Int, inContext 
 	}
 
 	// Fiat-Shamir heuristic to compute 'random' challenge x
-	x, _, _ := HashBP(T1, T2)
+	x, _, _ := HashBP(ha, T1, T2)
 
 	// compute bl                                                          // (58)
 	sLx, _ := VectorScalarMul(ec, sL, x)
@@ -146,12 +149,12 @@ func PartialProve(ec elliptic.Curve, secret *big.Int, gamma *big.Int, inContext 
 
 	// SetupInnerProduct Inner Product (Section 4.2)
 	var setupErr error
-	params.InnerProductParams, setupErr = setupInnerProduct(ec, params.H, params.Gg, hprime, tprime, params.N)
+	params.InnerProductParams, setupErr = setupInnerProduct(context, params.H, params.Gg, hprime, tprime, params.N)
 	if setupErr != nil {
 		return nil, nil, setupErr
 	}
 	commit := commitInnerProduct(ec, params.Gg, hprime, bl, br)
-	proofip, _ := proveInnerProduct(ec, bl, br, commit, params.InnerProductParams)
+	proofip, _ := proveInnerProduct(context, bl, br, commit, params.InnerProductParams)
 
 	outContext = &MPCPContext{
 		V:                 V,

@@ -3,6 +3,8 @@ package aggsig
 import (
 	"testing"
 
+	"github.com/AllFi/go-gost3410/hash"
+
 	"github.com/AllFi/go-gost3410"
 	"github.com/AllFi/go-gost3410/curve"
 	"github.com/AllFi/go-gost3410/utils"
@@ -10,16 +12,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// func TestDebug(t *testing.T) {
-// 	p := []string{"p", "q", "a", "b", "Bx", "By"}
-// 	for i := 0; i < len(CurveParamsGostR34102001CryptoProA); i++ {
-// 		println(p[i], hex.EncodeToString(CurveParamsGostR34102001CryptoProA[i]))
-// 	}
-// }
-
 func TestAggsig(t *testing.T) {
 	n := 4
-	context, err := gost3410.NewContext(curve.GOST34102001())
+	context, err := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 	mode := context.Curve.Params().BitSize / 8
 	assert.NoError(t, err)
 

@@ -19,11 +19,11 @@ package bulletproofs
 
 import (
 	"crypto/elliptic"
-	"crypto/sha256"
 	"errors"
 	"math/big"
 	"strconv"
 
+	"github.com/AllFi/go-gost3410"
 	"github.com/AllFi/go-gost3410/curve"
 	"github.com/ing-bank/zkrp/util/bn"
 	"github.com/ing-bank/zkrp/util/byteconversion"
@@ -65,7 +65,10 @@ type InnerProductProof struct {
 SetupInnerProduct is responsible for computing the inner product basic parameters that are common to both
 ProveInnerProduct and Verify algorithms.
 */
-func setupInnerProduct(ec elliptic.Curve, H *curve.Point, g, h []*curve.Point, c *big.Int, N int64) (InnerProductParams, error) {
+func setupInnerProduct(context *gost3410.Context, H *curve.Point, g, h []*curve.Point, c *big.Int, N int64) (InnerProductParams, error) {
+	ec := context.Curve
+	ha := context.HashAlgorithm
+
 	var params InnerProductParams
 
 	if N <= 0 {
@@ -74,14 +77,14 @@ func setupInnerProduct(ec elliptic.Curve, H *curve.Point, g, h []*curve.Point, c
 		params.N = N
 	}
 	if H == nil {
-		params.H, _ = curve.MapToGroup(ec, SEEDH)
+		params.H, _ = curve.MapToGroup(ec, ha, SEEDH)
 	} else {
 		params.H = H
 	}
 	if g == nil {
 		params.Gg = make([]*curve.Point, params.N)
 		for i := int64(0); i < params.N; i++ {
-			params.Gg[i], _ = curve.MapToGroup(ec, SEEDH+"g"+strconv.Itoa(int(i)))
+			params.Gg[i], _ = curve.MapToGroup(ec, ha, SEEDH+"g"+strconv.Itoa(int(i)))
 		}
 	} else {
 		params.Gg = g
@@ -89,13 +92,13 @@ func setupInnerProduct(ec elliptic.Curve, H *curve.Point, g, h []*curve.Point, c
 	if h == nil {
 		params.Hh = make([]*curve.Point, params.N)
 		for i := int64(0); i < params.N; i++ {
-			params.Hh[i], _ = curve.MapToGroup(ec, SEEDH+"h"+strconv.Itoa(int(i)))
+			params.Hh[i], _ = curve.MapToGroup(ec, ha, SEEDH+"h"+strconv.Itoa(int(i)))
 		}
 	} else {
 		params.Hh = h
 	}
 	params.Cc = c
-	params.Uu, _ = curve.MapToGroup(ec, SEEDU)
+	params.Uu, _ = curve.MapToGroup(ec, ha, SEEDU)
 	params.P = new(curve.Point).SetInfinity()
 
 	return params, nil
@@ -104,7 +107,9 @@ func setupInnerProduct(ec elliptic.Curve, H *curve.Point, g, h []*curve.Point, c
 /*
 proveInnerProduct calculates the Zero Knowledge Proof for the Inner Product argument.
 */
-func proveInnerProduct(ec elliptic.Curve, a, b []*big.Int, P *curve.Point, params InnerProductParams) (InnerProductProof, error) {
+func proveInnerProduct(context *gost3410.Context, a, b []*big.Int, P *curve.Point, params InnerProductParams) (InnerProductProof, error) {
+	ec := context.Curve
+
 	var (
 		proof InnerProductProof
 		n, m  int64
@@ -121,13 +126,13 @@ func proveInnerProduct(ec elliptic.Curve, a, b []*big.Int, P *curve.Point, param
 
 	// Fiat-Shamir:
 	// x = Hash(g,h,P,c)
-	x, _ := hashIP(ec, params.Gg, params.Hh, P, params.Cc, params.N)
+	x, _ := hashIP(context, params.Gg, params.Hh, P, params.Cc, params.N)
 	// Pprime = P.u^(x.c)
 	ux := new(curve.Point).ScalarMult(ec, params.Uu, x)
 	uxc := new(curve.Point).ScalarMult(ec, ux, params.Cc)
 	PP := new(curve.Point).Add(ec, P, uxc)
 	// Execute Protocol 2 recursively
-	proof = computeBipRecursive(ec, a, b, params.Gg, params.Hh, ux, PP, n, Ls, Rs)
+	proof = computeBipRecursive(context, a, b, params.Gg, params.Hh, ux, PP, n, Ls, Rs)
 	proof.Params = params
 	proof.Params.P = PP
 	return proof, nil
@@ -136,7 +141,10 @@ func proveInnerProduct(ec elliptic.Curve, a, b []*big.Int, P *curve.Point, param
 /*
 computeBipRecursive is the main recursive function that will be used to compute the inner product argument.
 */
-func computeBipRecursive(ec elliptic.Curve, a, b []*big.Int, g, h []*curve.Point, u, P *curve.Point, n int64, Ls, Rs []*curve.Point) InnerProductProof {
+func computeBipRecursive(context *gost3410.Context, a, b []*big.Int, g, h []*curve.Point, u, P *curve.Point, n int64, Ls, Rs []*curve.Point) InnerProductProof {
+	ec := context.Curve
+	ha := context.HashAlgorithm
+
 	var (
 		proof                            InnerProductProof
 		cL, cR, x, xinv, x2, x2inv       *big.Int
@@ -180,7 +188,7 @@ func computeBipRecursive(ec elliptic.Curve, a, b []*big.Int, g, h []*curve.Point
 		R.Add(ec, R, new(curve.Point).ScalarMult(ec, u, cR))
 
 		// Fiat-Shamir:                                                       // (26)
-		x, _, _ = HashBP(L, R)
+		x, _, _ = HashBP(ha, L, R)
 		xinv = bn.ModInverse(x, order)
 
 		// Compute g' = g[:n']^(x^-1) * g[n':]^(x)                            // (29)
@@ -211,7 +219,7 @@ func computeBipRecursive(ec elliptic.Curve, a, b []*big.Int, g, h []*curve.Point
 		Ls = append(Ls, L)
 		Rs = append(Rs, R)
 		// recursion computeBipRecursive(g',h',u,P'; a', b')                  // (35)
-		proof = computeBipRecursive(ec, aprime, bprime, gprime, hprime, u, Pprime, nprime, Ls, Rs)
+		proof = computeBipRecursive(context, aprime, bprime, gprime, hprime, u, Pprime, nprime, Ls, Rs)
 	}
 	proof.N = n
 	return proof
@@ -220,7 +228,9 @@ func computeBipRecursive(ec elliptic.Curve, a, b []*big.Int, g, h []*curve.Point
 /*
 Verify is responsible for the verification of the Inner Product Proof.
 */
-func (proof InnerProductProof) Verify(ec elliptic.Curve) (bool, error) {
+func (proof InnerProductProof) Verify(context *gost3410.Context) (bool, error) {
+	ec := context.Curve
+	ha := context.HashAlgorithm
 	order := ec.Params().N
 
 	logn := len(proof.Ls)
@@ -234,8 +244,8 @@ func (proof InnerProductProof) Verify(ec elliptic.Curve) (bool, error) {
 	Pprime := proof.Params.P
 	nprime := proof.N
 	for i := int64(0); i < int64(logn); i++ {
-		nprime = nprime / 2                        // (20)
-		x, _, _ = HashBP(proof.Ls[i], proof.Rs[i]) // (26)
+		nprime = nprime / 2                            // (20)
+		x, _, _ = HashBP(ha, proof.Ls[i], proof.Rs[i]) // (26)
 		xinv = bn.ModInverse(x, order)
 		// Compute g' = g[:n']^(x^-1) * g[n':]^(x)                            // (29)
 		ngprime = vectorScalarExp(ec, gprime[:nprime], xinv)
@@ -272,8 +282,11 @@ func (proof InnerProductProof) Verify(ec elliptic.Curve) (bool, error) {
 /*
 hashIP is responsible for the computing a Zp element given elements from GT and G1.
 */
-func hashIP(ec elliptic.Curve, g, h []*curve.Point, P *curve.Point, c *big.Int, n int64) (*big.Int, error) {
-	digest := sha256.New()
+func hashIP(context *gost3410.Context, g, h []*curve.Point, P *curve.Point, c *big.Int, n int64) (*big.Int, error) {
+	ec := context.Curve
+	ha := context.HashAlgorithm
+
+	digest := ha.New()
 	digest.Write(P.Bytes(ec))
 
 	for i := int64(0); i < n; i++ {

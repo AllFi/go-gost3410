@@ -22,54 +22,60 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/AllFi/go-gost3410"
 	"github.com/AllFi/go-gost3410/curve"
+	"github.com/AllFi/go-gost3410/hash"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestXWithinGenericRange(t *testing.T) {
-	if setupProveVerify18To200(t, 40) != true {
+	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	if setupProveVerify18To200(t, context, 40) != true {
 		t.Errorf("secret within range should verify successfully")
 	}
 }
 
 func TestXEqualToRangeStartGeneric(t *testing.T) {
-	if setupProveVerify18To200(t, 18) != true {
+	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	if setupProveVerify18To200(t, context, 18) != true {
 		t.Errorf("secret equal to range start should verify successfully")
 	}
 }
 
 func TestXLessThanRangeStartGeneric(t *testing.T) {
-	if setupProveVerify18To200(t, 17) != false {
+	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	if setupProveVerify18To200(t, context, 17) != false {
 		t.Errorf("secret less that range start should fail verification")
 	}
 }
 
 func TestXGreaterThanRangeEndGeneric(t *testing.T) {
-	if setupProveVerify18To200(t, 201) != false {
+	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	if setupProveVerify18To200(t, context, 201) != false {
 		t.Errorf("secret greater than range end should fail verification")
 	}
 }
 
 func TestXEqualToRangeEndGeneric(t *testing.T) {
-	if setupProveVerify18To200(t, 200) != false {
+	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	if setupProveVerify18To200(t, context, 200) != false {
 		t.Errorf("secret equal to range end should fail verification")
 	}
 }
 
-func setupProveVerify18To200(t *testing.T, secret int) bool {
-	ec := curve.GOST34102001()
-	params, errSetup := SetupGeneric(ec, 18, 200)
+func setupProveVerify18To200(t *testing.T, context *gost3410.Context, secret int) bool {
+	params, errSetup := SetupGeneric(context, 18, 200)
 	if errSetup != nil {
 		t.Errorf(errSetup.Error())
 		t.FailNow()
 	}
 	bigSecret := new(big.Int).SetInt64(int64(secret))
-	proof, errProve := ProveGeneric(ec, bigSecret, params)
+	proof, errProve := ProveGeneric(context, bigSecret, params)
 	if errProve != nil {
 		t.Errorf(errProve.Error())
 		t.FailNow()
 	}
-	ok, errVerify := proof.Verify(ec)
+	ok, errVerify := proof.Verify(context)
 	if errVerify != nil {
 		t.Errorf(errVerify.Error())
 		t.FailNow()
@@ -80,8 +86,8 @@ func setupProveVerify18To200(t *testing.T, secret int) bool {
 func TestJsonEncodeDecodeBPRP(t *testing.T) {
 	// Set up the range, [18, 200) in this case.
 	// We want to prove that we are over 18, and less than 200 years old.
-	ec := curve.GOST34102001()
-	params, errSetup := SetupGeneric(ec, 18, 200)
+	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
+	params, errSetup := SetupGeneric(context, 18, 200)
 	if errSetup != nil {
 		t.Errorf(errSetup.Error())
 		t.FailNow()
@@ -89,7 +95,7 @@ func TestJsonEncodeDecodeBPRP(t *testing.T) {
 
 	// Create the proof
 	bigSecret := new(big.Int).SetInt64(int64(40))
-	proof, errProve := ProveGeneric(ec, bigSecret, params)
+	proof, errProve := ProveGeneric(context, bigSecret, params)
 	if errProve != nil {
 		t.Errorf(errProve.Error())
 		t.FailNow()
@@ -113,7 +119,7 @@ func TestJsonEncodeDecodeBPRP(t *testing.T) {
 	assert.Equal(t, proof, decodedProof, "should be equal")
 
 	// Verify the proof
-	ok, errVerify := decodedProof.Verify(ec)
+	ok, errVerify := decodedProof.Verify(context)
 	if errVerify != nil {
 		t.Errorf(errVerify.Error())
 		t.FailNow()

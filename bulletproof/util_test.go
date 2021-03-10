@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/AllFi/go-gost3410/curve"
+	"github.com/AllFi/go-gost3410/hash"
 )
 
 /*
@@ -30,7 +31,7 @@ Test method powerOf, which must return a vector containing a growing sequence of
 powers of 2.
 */
 func TestPowerOf(t *testing.T) {
-	ec := curve.GOST34102001()
+	ec := curve.GOST34102001
 	result := powerOf(ec, new(big.Int).SetInt64(3), 3)
 	ok := result[0].Cmp(new(big.Int).SetInt64(1)) == 0
 	ok = ok && (result[1].Cmp(new(big.Int).SetInt64(3)) == 0)
@@ -47,7 +48,7 @@ func TestHashBP(t *testing.T) {
 	sgy, _ := new(big.Int).SetString("114946280626097680211499478702679495377587739951564115086530426937068100343655", 10)
 	pointa := &curve.Point{X: agx, Y: agy}
 	points := &curve.Point{X: sgx, Y: sgy}
-	result1, result2, _ := HashBP(pointa, points)
+	result1, result2, _ := HashBP(hash.SHA256, pointa, points)
 	res1, _ := new(big.Int).SetString("103823382860325249552741530200099120077084118788867728791742258217664299339569", 10)
 	res2, _ := new(big.Int).SetString("8192372577089859289404358830067912230280991346287696886048261417244724213964", 10)
 	ok1 := result1.Cmp(res1) != 0
@@ -62,7 +63,7 @@ func TestHashBPGx(t *testing.T) {
 	gx, _ := new(big.Int).SetString("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798", 16)
 	gy, _ := new(big.Int).SetString("483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8", 16)
 	point := &curve.Point{X: gx, Y: gy}
-	result1, result2, _ := HashBP(point, point)
+	result1, result2, _ := HashBP(hash.SHA256, point, point)
 	res1, _ := new(big.Int).SetString("11897424191990306464486192136408618361228444529783223689021929580052970909263", 10)
 	res2, _ := new(big.Int).SetString("22166487799255634251145870394406518059682307840904574298117500050508046799269", 10)
 	ok1 := result1.Cmp(res1) != 0
@@ -80,7 +81,7 @@ func TestScalarProduct(t *testing.T) {
 	var (
 		a, b []*big.Int
 	)
-	ec := curve.GOST34102001()
+	ec := curve.GOST34102001
 	a = make([]*big.Int, 3)
 	b = make([]*big.Int, 3)
 	a[0] = new(big.Int).SetInt64(7)

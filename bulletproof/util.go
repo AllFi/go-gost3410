@@ -20,10 +20,10 @@ package bulletproofs
 import (
 	"bytes"
 	"crypto/elliptic"
-	"crypto/sha256"
 	"errors"
 	"math/big"
 
+	"github.com/AllFi/go-gost3410"
 	"github.com/AllFi/go-gost3410/curve"
 	"github.com/ing-bank/zkrp/util/bn"
 	"github.com/ing-bank/zkrp/util/intconversion"
@@ -52,9 +52,8 @@ func powerOf(ec elliptic.Curve, x *big.Int, n int64) []*big.Int {
 /*
 Hash is responsible for the computing a Zp element given elements from GT and G1.
 */
-func HashBP(A, S *curve.Point) (*big.Int, *big.Int, error) {
-
-	digest1 := sha256.New()
+func HashBP(ha gost3410.HashAlgorithm, A, S *curve.Point) (*big.Int, *big.Int, error) {
+	digest1 := ha.New()
 	var buffer bytes.Buffer
 	buffer.WriteString(A.X.String())
 	buffer.WriteString(A.Y.String())
@@ -65,7 +64,7 @@ func HashBP(A, S *curve.Point) (*big.Int, *big.Int, error) {
 	tmp1 := output1[0:]
 	result1 := new(big.Int).SetBytes(tmp1)
 
-	digest2 := sha256.New()
+	digest2 := ha.New()
 	var buffer2 bytes.Buffer
 	buffer2.WriteString(A.X.String())
 	buffer2.WriteString(A.Y.String())

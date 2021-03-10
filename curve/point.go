@@ -3,14 +3,14 @@ package curve
 import (
 	"bytes"
 	"crypto/elliptic"
-	"crypto/sha256"
 	"errors"
 	"math/big"
 	"strconv"
 
+	"github.com/AllFi/go-gost3410"
+	gghash "github.com/AllFi/go-gost3410/hash"
 	"github.com/AllFi/go-gost3410/utils"
 	"github.com/ing-bank/zkrp/util/bn"
-	"github.com/ing-bank/zkrp/util/byteconversion"
 )
 
 type Point struct {
@@ -108,7 +108,7 @@ Short signatures from the Weil pairing
 Boneh, Lynn and Shacham
 Journal of Cryptology, September 2004, Volume 17, Issue 4, pp 297–319
 */
-func MapToGroup(ec elliptic.Curve, m string) (*Point, error) {
+func MapToGroup(ec elliptic.Curve, ha gost3410.HashAlgorithm, m string) (*Point, error) {
 	var (
 		i      int
 		buffer bytes.Buffer
@@ -118,7 +118,7 @@ func MapToGroup(ec elliptic.Curve, m string) (*Point, error) {
 		buffer.Reset()
 		buffer.WriteString(strconv.Itoa(i))
 		buffer.WriteString(m)
-		x, _ := HashToInt(buffer)
+		x := gghash.HashToInt(buffer.Bytes(), ha, ec)
 		x = bn.Mod(x, ec.Params().P)
 		fx, _ := F(ec, x)
 		fx = bn.Mod(fx, ec.Params().P)
@@ -147,17 +147,6 @@ func F(ec elliptic.Curve, x *big.Int) (*big.Int, error) {
 	y2 := big.NewInt(0).Add(x3, big.NewInt(0).Add(ax, b))
 	y2.Mod(y2, p)
 	return y2, nil
-}
-
-/*
-Hash is responsible for the computing a Zp element given the input string.
-*/
-func HashToInt(b bytes.Buffer) (*big.Int, error) {
-	digest := sha256.New()
-	digest.Write(b.Bytes())
-	output := digest.Sum(nil)
-	tmp := output[0:]
-	return byteconversion.FromByteArray(tmp)
 }
 
 func (p *Point) Bytes(curve elliptic.Curve) []byte {

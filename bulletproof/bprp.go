@@ -18,8 +18,9 @@
 package bulletproofs
 
 import (
-	"crypto/elliptic"
 	"math/big"
+
+	"github.com/AllFi/go-gost3410"
 )
 
 /*
@@ -45,16 +46,16 @@ type ProofBPRP struct {
 SetupGeneric is responsible for calling the Setup algorithm for each
 BulletProof.
 */
-func SetupGeneric(ec elliptic.Curve, a, b int64) (*bprp, error) {
+func SetupGeneric(context *gost3410.Context, a, b int64) (*bprp, error) {
 	params := new(bprp)
 	params.A = a
 	params.B = b
 	var errBp1, errBp2 error
-	params.BP1, errBp1 = Setup(ec, MAX_RANGE_END)
+	params.BP1, errBp1 = Setup(context, MAX_RANGE_END)
 	if errBp1 != nil {
 		return nil, errBp1
 	}
-	params.BP2, errBp2 = Setup(ec, MAX_RANGE_END)
+	params.BP2, errBp2 = Setup(context, MAX_RANGE_END)
 	if errBp2 != nil {
 		return nil, errBp2
 	}
@@ -67,7 +68,7 @@ allow generic intervals in the format [A, B) it is necessary to use 2
 BulletProofs, as explained in Section 4.3 from the following paper:
 https://infoscience.epfl.ch/record/128718/files/CCS08.pdf
 */
-func ProveGeneric(ec elliptic.Curve, secret *big.Int, params *bprp) (ProofBPRP, error) {
+func ProveGeneric(context *gost3410.Context, secret *big.Int, params *bprp) (ProofBPRP, error) {
 	var proof ProofBPRP
 
 	// x - b + 2^N
@@ -76,14 +77,14 @@ func ProveGeneric(ec elliptic.Curve, secret *big.Int, params *bprp) (ProofBPRP, 
 	xb.Add(xb, p2)
 
 	var err1 error
-	proof.P1, err1 = Prove(ec, xb, params.BP1)
+	proof.P1, err1 = Prove(context, xb, params.BP1)
 	if err1 != nil {
 		return proof, err1
 	}
 
 	xa := new(big.Int).Sub(secret, new(big.Int).SetInt64(params.A))
 	var err2 error
-	proof.P2, err2 = Prove(ec, xa, params.BP2)
+	proof.P2, err2 = Prove(context, xa, params.BP2)
 	if err2 != nil {
 		return proof, err2
 	}
@@ -94,12 +95,12 @@ func ProveGeneric(ec elliptic.Curve, secret *big.Int, params *bprp) (ProofBPRP, 
 /*
 Verify call the Verification algorithm for each BulletProof argument.
 */
-func (proof ProofBPRP) Verify(ec elliptic.Curve) (bool, error) {
-	ok1, err1 := proof.P1.Verify(ec)
+func (proof ProofBPRP) Verify(context *gost3410.Context) (bool, error) {
+	ok1, err1 := proof.P1.Verify(context)
 	if !ok1 {
 		return false, err1
 	}
-	ok2, err2 := proof.P2.Verify(ec)
+	ok2, err2 := proof.P2.Verify(context)
 	if !ok2 {
 		return false, err2
 	}

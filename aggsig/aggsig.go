@@ -33,7 +33,7 @@ func SignPartial(
 	d := privateKey.Int
 	k := big.NewInt(0).SetBytes(nonce)
 	r := sumNonces.X
-	e := hash.Calculate(msg, context.Curve)
+	e := hash.HashToInt(msg, context.HashAlgorithm, context.Curve)
 	q := context.Curve.Params().N
 	mode := context.Curve.Params().BitSize / 8
 
@@ -95,7 +95,7 @@ func verify(context *gost3410.Context, signature []byte, publicKey *PublicKey, m
 		return false, nil
 	}
 
-	e := hash.Calculate(msg, curve)
+	e := hash.HashToInt(msg, context.HashAlgorithm, curve)
 	v := big.NewInt(0).ModInverse(e, q)
 
 	// z1 = s * v mod q

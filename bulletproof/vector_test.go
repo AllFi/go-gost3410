@@ -69,7 +69,7 @@ func TestVectorAdd(t *testing.T) {
 	var (
 		a, b []*big.Int
 	)
-	ec := curve.GOST34102001()
+	ec := curve.GOST34102001
 	a = make([]*big.Int, 3)
 	b = make([]*big.Int, 3)
 	a[0] = new(big.Int).SetInt64(7)
@@ -94,7 +94,7 @@ func TestVectorAdd(t *testing.T) {
 // 	var (
 // 		a, b []*big.Int
 // 	)
-// 	ec := curve.GOST34102001()
+// 	ec := curve.GOST34102001
 // 	a = make([]*big.Int, 3)
 // 	b = make([]*big.Int, 3)
 // 	a[0] = new(big.Int).SetInt64(7)
@@ -119,7 +119,7 @@ func TestVectorMul(t *testing.T) {
 	var (
 		a, b []*big.Int
 	)
-	ec := curve.GOST34102001()
+	ec := curve.GOST34102001
 	a = make([]*big.Int, 3)
 	b = make([]*big.Int, 3)
 	a[0] = new(big.Int).SetInt64(7)

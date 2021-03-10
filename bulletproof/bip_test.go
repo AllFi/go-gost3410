@@ -21,7 +21,9 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/AllFi/go-gost3410"
 	"github.com/AllFi/go-gost3410/curve"
+	"github.com/AllFi/go-gost3410/hash"
 )
 
 /*
@@ -34,9 +36,9 @@ func TestInnerProduct(t *testing.T) {
 		b                  []*big.Int
 	)
 	c := new(big.Int).SetInt64(142)
-	ec := curve.GOST34102001()
+	context, _ := gost3410.NewContext(curve.GOST34102001, hash.GOST34112012256)
 
-	innerProductParams, _ = setupInnerProduct(ec, nil, nil, nil, c, 4)
+	innerProductParams, _ = setupInnerProduct(context, nil, nil, nil, c, 4)
 
 	a = make([]*big.Int, innerProductParams.N)
 	a[0] = new(big.Int).SetInt64(2)
@@ -48,10 +50,10 @@ func TestInnerProduct(t *testing.T) {
 	b[1] = new(big.Int).SetInt64(2)
 	b[2] = new(big.Int).SetInt64(10)
 	b[3] = new(big.Int).SetInt64(7)
-	commit := commitInnerProduct(ec, innerProductParams.Gg, innerProductParams.Hh, a, b)
+	commit := commitInnerProduct(context.Curve, innerProductParams.Gg, innerProductParams.Hh, a, b)
 
-	proof, _ := proveInnerProduct(ec, a, b, commit, innerProductParams)
-	ok, _ := proof.Verify(ec)
+	proof, _ := proveInnerProduct(context, a, b, commit, innerProductParams)
+	ok, _ := proof.Verify(context)
 	if ok != true {
 		t.Errorf("Assert failure: expected true, actual: %t", ok)
 	}
